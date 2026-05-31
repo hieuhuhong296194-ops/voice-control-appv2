@@ -1,33 +1,31 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
 import * as Speech from 'expo-speech';
-import { WebView } from 'react-native-webview';
 
 export default function App() {
-  const [transcript, setTranscript] = useState('');
-  const [result, setResult] = useState('Chờ lệnh...');
-  const [isListening, setIsListening] = useState(false);
+  const [input, setInput] = useState('');
+  const [result, setResult] = useState('Nhập lệnh hoặc nói...');
   const [logs, setLogs] = useState([]);
-  const webviewRef = useRef(null);
 
   const commands = {
-    'xin chào': () => respond('Xin chào anh!'),
-    'mấy giờ rồi': () => respond(`Bây giờ là ${new Date().toLocaleTimeString('vi-VN')}`),
-    'hôm nay thứ mấy': () => respond(`Hôm nay là ${new Date().toLocaleDateString('vi-VN', {weekday:'long'})}`),
-    'mở camera': () => respond('Đang mở Camera...'),
-    'mở cài đặt': () => respond('Đang mở Cài đặt...'),
-    'tăng âm lượng': () => respond('Đang tăng âm lượng...'),
-    'giảm âm lượng': () => respond('Đang giảm âm lượng...'),
-    'cảm ơn': () => respond('Không có gì ạ!'),
+    'xin chào': 'Xin chào anh!',
+    'mấy giờ rồi': new Date().toLocaleTimeString('vi-VN'),
+    'hôm nay thứ mấy': new Date().toLocaleDateString('vi-VN',{weekday:'long'}),
+    'mở camera': 'Đang mở Camera...',
+    'mở cài đặt': 'Đang mở Cài đặt...',
+    'cảm ơn': 'Không có gì ạ!',
   };
 
   const handleCommand = (text) => {
-    setTranscript(text);
+    const t = text.toLowerCase();
     let found = false;
-    for (const [key, action] of Object.entries(commands)) {
-      if (text.toLowerCase().includes(key)) { action(); found = true; break; }
+    for (const [key, val] of Object.entries(commands)) {
+      if (t.includes(key)) {
+        respond(val); found = true; break;
+      }
     }
     if (!found) respond(`Không hiểu: "${text}"`);
+    setInput('');
   };
 
   const respond = (msg) => {
@@ -36,34 +34,26 @@ export default function App() {
     Speech.speak(msg, { language: 'vi-VN' });
   };
 
-  const html = `<html><body><script>
-    var r = new webkitSpeechRecognition();
-    r.lang='vi-VN'; r.continuous=false;
-    r.onresult=function(e){window.ReactNativeWebView.postMessage(e.results[0][0].transcript)};
-    function start(){r.start()} function stop(){r.stop()}
-  </script></body></html>`;
-
   return (
     <View style={s.container}>
       <Text style={s.title}>🎙️ Voice Control</Text>
-      <WebView ref={webviewRef} source={{html}} style={{height:0,width:0}}
-        onMessage={e=>handleCommand(e.nativeEvent.data)} javaScriptEnabled/>
-      <View style={s.box}>
-        <Text style={s.label}>Đã nghe:</Text>
-        <Text style={s.blue}>{transcript||'...'}</Text>
+      <View style={s.resultBox}>
+        <Text style={s.resultText}>{result}</Text>
       </View>
-      <View style={s.result}>
-        <Text style={s.white}>{result}</Text>
-      </View>
-      <TouchableOpacity style={[s.mic, isListening&&s.micOn]}
-        onPressIn={()=>{setIsListening(true);webviewRef.current?.injectJavaScript('start();true;')}}
-        onPressOut={()=>{setIsListening(false);webviewRef.current?.injectJavaScript('stop();true;')}}>
-        <Text style={{fontSize:36}}>{isListening?'🔴':'🎙️'}</Text>
-        <Text style={s.white}>{isListening?'Đang nghe...':'Giữ để nói'}</Text>
+      <TextInput
+        style={s.input}
+        value={input}
+        onChangeText={setInput}
+        placeholder="Nhập lệnh tiếng Việt..."
+        placeholderTextColor="#666"
+        onSubmitEditing={() => handleCommand(input)}
+      />
+      <TouchableOpacity style={s.btn} onPress={() => handleCommand(input)}>
+        <Text style={s.btnText}>▶ Thực hiện lệnh</Text>
       </TouchableOpacity>
       <ScrollView style={s.log}>
         <Text style={s.label}>Nhật ký:</Text>
-        {logs.map((l,i)=><Text key={i} style={s.logText}>{l}</Text>)}
+        {logs.map((l,i) => <Text key={i} style={s.logText}>{l}</Text>)}
       </ScrollView>
     </View>
   );
@@ -72,13 +62,12 @@ export default function App() {
 const s = StyleSheet.create({
   container:{flex:1,backgroundColor:'#0f0f1a',padding:20,paddingTop:50},
   title:{fontSize:26,fontWeight:'bold',color:'#fff',textAlign:'center',marginBottom:20},
-  box:{backgroundColor:'#1a1a2e',borderRadius:12,padding:15,marginBottom:10},
-  label:{color:'#666',fontSize:12,marginBottom:4},
-  blue:{color:'#00d4ff',fontSize:16},
-  result:{backgroundColor:'#16213e',borderRadius:12,padding:15,marginBottom:20,minHeight:55,justifyContent:'center'},
-  white:{color:'#fff',fontSize:16,textAlign:'center'},
-  mic:{backgroundColor:'#4a00e0',borderRadius:100,width:130,height:130,alignSelf:'center',justifyContent:'center',alignItems:'center',marginBottom:20,elevation:8},
-  micOn:{backgroundColor:'#e00040'},
+  resultBox:{backgroundColor:'#16213e',borderRadius:12,padding:15,marginBottom:20,minHeight:60,justifyContent:'center'},
+  resultText:{color:'#fff',fontSize:16,textAlign:'center'},
+  input:{backgroundColor:'#1a1a2e',borderRadius:12,padding:14,color:'#fff',fontSize:15,marginBottom:12,borderWidth:1,borderColor:'#333'},
+  btn:{backgroundColor:'#4a00e0',borderRadius:12,padding:14,alignItems:'center',marginBottom:20},
+  btnText:{color:'#fff',fontSize:15,fontWeight:'bold'},
   log:{flex:1,backgroundColor:'#1a1a2e',borderRadius:12,padding:10},
+  label:{color:'#666',fontSize:12,marginBottom:4},
   logText:{color:'#aaa',fontSize:12,marginBottom:3},
 });
