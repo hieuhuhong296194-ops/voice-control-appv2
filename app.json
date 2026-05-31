@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Voice Control",
+    "slug": "voice-app-v2",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.voiceapp.v2",
+      "permissions": ["RECORD_AUDIO", "INTERNET"]
+    }
+  }
+}
